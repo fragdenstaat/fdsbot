@@ -1,0 +1,20 @@
+{
+  "name": "fdsbot",
+  "version": "0.0.0",
+  "private": true,
+  "author": "FragDenStaat info@fragdenstaat.de",
+  "description": "Der hilfreiche FragDenStaat-Bot",
+  "dependencies": {
+    "@octokit/core": "^3.3.1",
+    "@throneless/hubot-file-brain": "==0.2.0",
+    "hubot": "^3.3.2",
+    "hubot-diagnostics": "^1.0.0",
+    "hubot-help": "^1.0.1",
+    "hubot-rules": "^1.0.0",
+    "hubot-slack": "^4.9.0",
+    "shelljs": ">= 0.5.3"
+  },
+  "engines": {
+    "node": "0.10.x"
+  }
+}
