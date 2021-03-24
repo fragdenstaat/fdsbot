@@ -41,8 +41,10 @@ runChecks = () ->
       checks = (result.data.check_runs[0] for result in results)
       bad_checks = []
       for check in checks
-        if check.status != "completed" or check.conclusion != "success"
-          bad_checks.push(check.html_url)
+        if check.status != "completed"
+          bad_checks.push("pending: #{check.html_url}")
+        if check.conclusion != "success"
+          bad_checks.push("failed: #{check.html_url}")
       if bad_checks.length > 0
         return reject("#{bad_checks.join(" | ")}")
       return resolve(checks)
@@ -208,7 +210,7 @@ module.exports = (robot) ->
       start_deploy(res, deploy_tag)
     , (bad_checks) ->
       console.log("Bad Checks!")
-      res.reply("Cannot deploy because checks failed: #{bad_checks}")
+      res.reply("Cannot deploy, checks are blocking: #{bad_checks}")
     )
 
   robot.respond /force deploy (web|frontend|backend|all)/i, (res) ->
