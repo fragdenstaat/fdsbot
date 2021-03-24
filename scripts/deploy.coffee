@@ -43,7 +43,7 @@ runChecks = () ->
       for check in checks
         if check.status != "completed"
           bad_checks.push("pending: #{check.html_url}")
-        if check.conclusion != "success"
+        else if check.conclusion != "success"
           bad_checks.push("failed: #{check.html_url}")
       if bad_checks.length > 0
         return reject("#{bad_checks.join(" | ")}")
