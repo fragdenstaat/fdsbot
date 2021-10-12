@@ -156,7 +156,7 @@ module.exports = (robot) ->
       args.push(t)
 
     console.log(tags)
-    child_process.exec("git pull origin master", { cwd: "#{ansible_path}" }, (e) ->
+    child_process.exec("git pull origin main", { cwd: "#{ansible_path}" }, (e) ->
       if e
         console.error('Git pull failed', e)
         return
