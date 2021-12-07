@@ -78,7 +78,7 @@ module.exports = (robot) ->
   robot.receiveMiddleware (context, next, done) ->
     if context.response.message.room != ROOM
       context.response.message.finish()
-      context.response.reply "Ich funktioniere nur im fragdenstaat-alerts channel!"
+      context.response.reply "I only work in the fragdenstaat-alerts channel!"
       return done()
 
     if not context.response.message.user.name in ALLOWED_USERS
@@ -87,7 +87,7 @@ module.exports = (robot) ->
       # If the message starts with 'hubot' or the alias pattern, this user was
       # explicitly trying to run a command, so respond with an error message.
       if context.response.message.text?.match(robot.respondPattern(''))
-        context.response.reply "Hey #{context.response.message.user.name}, du darfst leider nicht mir sprechen! Frag doch bitte: #{ALLOWED_USERS.join(', ')}"
+        context.response.reply "Hey #{context.response.message.user.name}, you are not allowed to talk to me! Please ask one of: #{ALLOWED_USERS.join(', ')}"
 
       # Don't process further middleware.
       return done()
@@ -98,12 +98,12 @@ module.exports = (robot) ->
     deploying = robot.brain.get('deployment') or null
     if deploying != null
       deploy_secs = Math.floor((new Date().getTime() - deploying.time) / 1000)
-      res.reply "Ein Deployment angestoßen von #{deploying.user} läuft gerade seit #{deploy_secs} Sekunden."
+      res.reply "A deployment by #{deploying.user} for #{deploying.tags.join(', ')} is running for #{deploy_secs} seconds."
       return true
     return false
 
   log_start_deployment = (user, tags) ->
-    robot.brain.set 'deployment', { user: user, time: new Date().getTime() }
+    robot.brain.set 'deployment', { user: user, time: new Date().getTime(), tags: tags }
     deployments = robot.brain.get('deployments') or []
     deployments.push({
       user: user,
@@ -138,13 +138,7 @@ module.exports = (robot) ->
     robot.brain.set('deployments', deployments)
 
   log_abort_deployment = () ->
-    robot.brain.set 'deployment', null
-    deployments = robot.brain.get('deployments') or []
-    last_deployment = deployments[deployments.length - 1]
-    last_deployment.end = new Date().toISOString()
-    last_deployment.canceled = true
-    last_deployment.canceled_by = null
-    robot.brain.set('deployments', deployments)
+    log_cancel_deployment(null)
 
   handle_ansible_complete = (res, code, signal) ->
     if code == null
@@ -226,7 +220,7 @@ module.exports = (robot) ->
   robot.respond /deploy\s*$/, (res) ->
     if check_running(res)
       return
-    return res.reply "#{res.message.user.name}, was soll ich deployen? Wähle zwischen web, frontend, backend, all. Sage fdsbot deploy <tag>"
+    return res.reply "#{res.message.user.name}, what should I deploy? Choose one of web, frontend, backend, all. Say: fdsbot deploy <tag>"
 
   robot.respond /deploy (web|frontend|backend|all)/i, (res) ->
     if check_running(res)
@@ -236,7 +230,7 @@ module.exports = (robot) ->
     log_start_deployment(res.message.user.name, deploy_tag)
     res.reply "Running deployment checks"
     runChecks((pending) ->
-      res.reply("Checks are pending, deployment will be re-tried automatically when checks succeed.")
+      res.reply("Checks are pending, deployment will continue automatically when checks pass.")
     ).then(() ->
       console.log("Checks ok!")
       start_deploy(res, deploy_tag)
