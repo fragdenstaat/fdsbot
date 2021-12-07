@@ -98,16 +98,16 @@ module.exports = (robot) ->
     deploying = robot.brain.get('deployment') or null
     if deploying != null
       deploy_secs = Math.floor((new Date().getTime() - deploying.time) / 1000)
-      res.reply "A deployment by #{deploying.user} for #{deploying.tags.join(', ')} is running for #{deploy_secs} seconds."
+      res.reply "A deployment by #{deploying.user} for #{deploying.tags} is running for #{deploy_secs} seconds."
       return true
     return false
 
-  log_start_deployment = (user, tags) ->
-    robot.brain.set 'deployment', { user: user, time: new Date().getTime(), tags: tags }
+  log_start_deployment = (user, deploy_tag) ->
+    robot.brain.set 'deployment', { user: user, time: new Date().getTime(), tags: deploy_tag }
     deployments = robot.brain.get('deployments') or []
     deployments.push({
       user: user,
-      tags: tags,
+      tags: deploy_tag,
       start: new Date().toISOString()
     })
     robot.brain.set('deployments', deployments)
