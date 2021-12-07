@@ -34,21 +34,42 @@ DEPLOYMENT_HIGHLIGHTS = [
 
 DEPLOYMENT_PROCESS = {}
 
-runChecks = () ->
+collectChecks = (check_repos) ->
   return new Promise((resolve, reject) ->
-    promises = (octokit.request("GET #{path}") for path in CHECK_REPOS)
+    promises = (octokit.request("GET #{path}") for path in check_repos)
     Promise.all(promises).then((results) ->
       checks = (result.data.check_runs[0] for result in results)
-      bad_checks = []
+      pending = []
+      failed = []
       for check in checks
         if check.status != "completed"
-          bad_checks.push("pending: #{check.html_url}")
+          pending.push(check.html_url)
         else if check.conclusion != "success"
-          bad_checks.push("failed: #{check.html_url}")
-      if bad_checks.length > 0
-        return reject("#{bad_checks.join(" | ")}")
+          failed.push(check.html_url)
+      if pending.length > 0 or failed.length > 0
+        return reject({ pending: pending, failed: failed })
       return resolve(checks)
     )
+  )
+
+_runChecks = (pending_callback, resolve, reject, first) ->
+  collectChecks(CHECK_REPOS).then((checks) ->
+      return resolve(checks)
+    , (bad_checks) ->
+      if bad_checks.failed.length > 0
+        return reject("#{bad_checks.failed.join(" | ")}")
+      else if bad_checks.pending.length > 0
+        if first
+          pending_callback(bad_checks.pending)
+        # Try again
+        setTimeout(() ->
+          _runChecks(pending_callback, resolve, reject, false)
+        , 1000 * 60 * 2)
+    )
+
+runChecks = (pending_callback) ->
+  return new Promise((resolve, reject) ->
+    _runChecks(pending_callback, resolve, reject, true)
   )
 
 
@@ -114,6 +135,15 @@ module.exports = (robot) ->
     last_deployment.end = new Date().toISOString()
     last_deployment.canceled = true
     last_deployment.canceled_by = user
+    robot.brain.set('deployments', deployments)
+
+  log_abort_deployment = () ->
+    robot.brain.set 'deployment', null
+    deployments = robot.brain.get('deployments') or []
+    last_deployment = deployments[deployments.length - 1]
+    last_deployment.end = new Date().toISOString()
+    last_deployment.canceled = true
+    last_deployment.canceled_by = null
     robot.brain.set('deployments', deployments)
 
   handle_ansible_complete = (res, code, signal) ->
@@ -191,7 +221,6 @@ module.exports = (robot) ->
   start_deploy = (res, deploy_tag) ->
     console.log("Deploying #{deploy_tag}")
     res.reply "Deploying #{deploy_tag}..."
-    log_start_deployment(res.message.user.name, deploy_tag)
     setup_ansible(res, deploy_tag)
 
   robot.respond /deploy\s*$/, (res) ->
@@ -204,13 +233,17 @@ module.exports = (robot) ->
       return
     deploy_tag = res.match[1]
 
+    log_start_deployment(res.message.user.name, deploy_tag)
     res.reply "Running deployment checks"
-    runChecks().then(() ->
+    runChecks((pending) ->
+      res.reply("Checks are pending, deployment will be re-tried automatically when checks succeed.")
+    ).then(() ->
       console.log("Checks ok!")
       start_deploy(res, deploy_tag)
     , (bad_checks) ->
+      log_abort_deployment()
       console.log("Bad Checks!")
-      res.reply("Cannot deploy, checks are blocking: #{bad_checks}")
+      res.reply("Cannot deploy, checks have failed: #{bad_checks}")
     )
 
   robot.respond /force deploy (web|frontend|backend|all)/i, (res) ->
@@ -229,10 +262,10 @@ module.exports = (robot) ->
             DEPLOYMENT_PROCESS.child.kill('SIGTERM')
           DEPLOYMENT_PROCESS.child = null
           log_cancel_deployment(res.message.user.name)
-          return res.reply "deployment abgebrochen!"
-
-      return res.reply "deployment konnte nicht abgebrochen werden!"
-    return res.reply "es läuft kein deployment."
+          return res.reply "deployment canceled!"
+      log_cancel_deployment(res.message.user.name)
+      return res.reply "deployment process not found, canceled anyway!"
+    return res.reply "No deployments are running."
 
   robot.respond /last deploy/, (res) ->
     deployments = robot.brain.get('deployments') or []
@@ -241,11 +274,11 @@ module.exports = (robot) ->
     else
       last = deployments[deployments.length - 1]
     if last
-      res.reply "das letzte deployment war von #{last.user} von #{last.start} bis #{last.end}."
+      res.reply "The last deployment was by #{last.user} from #{last.start} to #{last.end}."
       if last.canceled
-        res.reply "es wurde von #{last.canceled_by} abgebrochen."
+        res.reply "It was canceled by #{last.canceled_by}."
       return
-    return res.reply "konnte kein deployment finden."
+    return res.reply "Could not find any deployments."
 
   robot.enter (res) ->
     res.send "Hey @#{res.message.user.name}! Willkommen im fragdenstaat-alerts-Channel!"
