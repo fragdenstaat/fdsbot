@@ -26,10 +26,10 @@ CHECK_REPOS = [
 ansible_path = "../fragdenstaat.de-ansible"
 
 DEPLOYMENT_HIGHLIGHTS = [
-  /TASK \[web : (Reload application)\]/,
-  /TASK \[web : (Run yarn setup script)\]/,
-  /TASK \[web : (Run Django database migrations)\]/,
-  /TASK \[web : (Install packages required by the Django app inside virtualenv)\]/
+  /TASK \[appserver : (Reload application)\]/,
+  /TASK \[appserver : (Run yarn setup script)\]/,
+  /TASK \[app : (Run Django database migrations)\]/,
+  /TASK \[app : (Install packages required by the Django app inside virtualenv)\]/
 ]
 
 DEPLOYMENT_PROCESS = {}
