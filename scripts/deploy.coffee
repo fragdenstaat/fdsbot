@@ -30,6 +30,7 @@ DEPLOYMENT_HIGHLIGHTS = [
   /TASK \[appserver : (Run yarn setup script)\]/,
   /TASK \[app : (Run Django database migrations)\]/,
   /TASK \[app : (Install packages required by the Django app inside virtualenv)\]/
+  /TASK \[celery : (Update celery workers)\]/,
 ]
 
 DEPLOYMENT_PROCESS = {}
