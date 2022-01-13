@@ -234,6 +234,10 @@ module.exports = (robot) ->
       res.reply("Checks are pending, deployment will continue automatically when checks pass.")
     ).then(() ->
       console.log("Checks ok!")
+      deploying = robot.brain.get('deployment') or null
+      if not deploying
+        # deployment was canceled in the mean time
+        return
       start_deploy(res, deploy_tag)
     , (bad_checks) ->
       log_abort_deployment()
