@@ -43,6 +43,8 @@ collectChecks = (check_repos) ->
       pending = []
       failed = []
       for check in checks
+        if not check
+          continue
         if check.status != "completed"
           pending.push(check.html_url)
         else if check.conclusion != "success"
