@@ -14,7 +14,7 @@ octokit = new Octokit({ auth: process.env.OCTOKIT_TOKEN })
 
 child_process = require "child_process"
 
-ALLOWED_USERS = ['stefanw', 'magda', 'arnese', 'Max']
+ALLOWED_USERS = ['stefanw', 'magda', 'arnese', 'Max', 'Karl // pajowu']
 SUPER_USERS = ['stefanw']
 ROOM = "G5KALBN4F"
 
