@@ -27,8 +27,8 @@ const SUPER_USERS = ['stefanw'];
 const ROOM = "G5KALBN4F";
 
 const CHECK_REPOS = [
-  "/repos/okfde/froide/commits/main/check-runs",
-  "/repos/okfde/fragdenstaat_de/commits/master/check-runs",
+  "okfde/froide",
+  "okfde/fragdenstaat_de",
 ];
 
 const ansible_path = "../fragdenstaat.de-ansible";
@@ -44,7 +44,7 @@ const DEPLOYMENT_HIGHLIGHTS = [
 const DEPLOYMENT_PROCESS = {};
 
 const collectChecks = check_repos => new Promise(function (resolve, reject) {
-  const promises = (Array.from(check_repos).map((path) => octokit.request(`GET ${path}`)));
+  const promises = (Array.from(check_repos).map((path) => octokit.request(`GET /repos/${path}/commits/main/check-runs`)));
   return Promise.all(promises).then(function (results) {
     const checks = (Array.from(results).map((result) => result.data.check_runs[0]));
     const pending = [];
