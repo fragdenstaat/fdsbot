@@ -11,7 +11,7 @@
     "hubot-diagnostics": "^1.0.0",
     "hubot-help": "^1.0.1",
     "hubot-rules": "^1.0.0",
-    "hubot-slack": "^4.9.0",
+    "hubot-slack": "4.10.0",
     "shelljs": ">= 0.5.3"
   },
   "engines": {
