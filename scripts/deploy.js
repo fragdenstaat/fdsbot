@@ -31,6 +31,32 @@ const CHECK_REPOS = [
   "okfde/fragdenstaat_de",
 ];
 
+if (!Array.prototype.flat) {
+  Object.defineProperty(Array.prototype, 'flat', {
+    configurable: true,
+    writable: true,
+    value: function () {
+      var depth =
+        typeof arguments[0] === 'undefined' ? 1 : Number(arguments[0]) || 0;
+      var result = [];
+      var forEach = result.forEach;
+
+      var flatDeep = function (arr, depth) {
+        forEach.call(arr, function (val) {
+          if (depth > 0 && Array.isArray(val)) {
+            flatDeep(val, depth - 1);
+          } else {
+            result.push(val);
+          }
+        });
+      };
+
+      flatDeep(this, depth);
+      return result;
+    },
+  });
+}
+
 const ansible_path = "../fragdenstaat.de-ansible";
 
 const DEPLOYMENT_HIGHLIGHTS = [
@@ -43,33 +69,36 @@ const DEPLOYMENT_HIGHLIGHTS = [
 
 const DEPLOYMENT_PROCESS = {};
 
+const repoNameFromUrl = (url) => url.split("/")[5]
+
 const collectChecks = check_repos => new Promise(function (resolve, reject) {
   const promises = (Array.from(check_repos).map((path) => octokit.request(`GET /repos/${path}/commits/main/check-runs`)));
   return Promise.all(promises).then(function (results) {
     const checks = (Array.from(results).map((result) => result.data.check_runs)).flat();
     const pending = [];
     const failed = [];
-    for (let check of Array.from(checks)) {
+    for (let check of checks) {
       if (!check) {
         continue;
       }
       if (check.status !== "completed") {
-        pending.push(check.html_url);
+        pending.push({url: check.html_url, name: check.name, repo: repoNameFromUrl(check.url)});
       } else if (check.conclusion !== "success") {
-        failed.push(check.html_url);
+        failed.push({url: check.html_url, name: check.name});
       }
     }
-    if ((pending.length > 0) || (failed.length > 0)) {
+    if (pending.length > 0 || failed.length > 0) {
       return reject({ pending, failed });
     }
     return resolve(checks);
   });
 });
 
-var _runChecks = (pending_callback, resolve, reject, first) => collectChecks(CHECK_REPOS).then(checks => resolve(checks)
-  , function (bad_checks) {
+var _runChecks = (pending_callback, resolve, reject, first) => collectChecks(CHECK_REPOS).then(
+  checks => resolve(checks),
+  bad_checks => {
     if (bad_checks.failed.length > 0) {
-      return reject(`${bad_checks.failed.join(" | ")}`);
+      return reject(`Checks failed for: ${bad_checks.failed.map(f => `<${f.url}|${f.repo}: ${f.name}>`).join(", ")}`);
     } else if (bad_checks.pending.length > 0) {
       if (first) {
         pending_callback(bad_checks.pending);
@@ -281,7 +310,7 @@ module.exports = function (robot) {
 
     log_start_deployment(res.message.user.name, deploy_tag);
     res.reply("Running deployment checks");
-    return runChecks(pending => res.reply("Checks are pending, deployment will continue automatically when checks pass.")).then(function () {
+    return runChecks(pending => res.reply("Checks are pending, deployment will continue automatically when checks pass.")).then(() => {
       console.log("Checks ok!");
       const deploying = robot.brain.get('deployment') || null;
       if (!deploying) {
