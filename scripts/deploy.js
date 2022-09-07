@@ -46,7 +46,7 @@ const DEPLOYMENT_PROCESS = {};
 const collectChecks = check_repos => new Promise(function (resolve, reject) {
   const promises = (Array.from(check_repos).map((path) => octokit.request(`GET /repos/${path}/commits/main/check-runs`)));
   return Promise.all(promises).then(function (results) {
-    const checks = (Array.from(results).map((result) => result.data.check_runs[0]));
+    const checks = (Array.from(results).map((result) => result.data.check_runs)).flat();
     const pending = [];
     const failed = [];
     for (let check of Array.from(checks)) {
