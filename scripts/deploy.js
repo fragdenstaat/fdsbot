@@ -81,10 +81,11 @@ const collectChecks = check_repos => new Promise(function (resolve, reject) {
       if (!check) {
         continue;
       }
+      const checkData = {url: check.html_url, name: check.name, repo: repoNameFromUrl(check.url)}
       if (check.status !== "completed") {
-        pending.push({url: check.html_url, name: check.name, repo: repoNameFromUrl(check.url)});
+        pending.push(checkData);
       } else if (check.conclusion !== "success") {
-        failed.push({url: check.html_url, name: check.name});
+        failed.push(checkData);
       }
     }
     if (pending.length > 0 || failed.length > 0) {
