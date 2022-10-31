@@ -29,6 +29,7 @@ const ROOM = "G5KALBN4F";
 const CHECK_REPOS = [
   "okfde/froide",
   "okfde/fragdenstaat_de",
+  "okfde/django-filingcabinet",
 ];
 
 if (!Array.prototype.flat) {
