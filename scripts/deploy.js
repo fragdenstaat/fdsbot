@@ -239,7 +239,7 @@ module.exports = function (robot) {
       }
       return result;
     })());
-    const args = ["fragdenstaat.de.yml"];
+    const args = ["playbooks/fragdenstaat.de.yml"];
     for (let t of Array.from(tags)) {
       args.push('-t');
       args.push(t);
