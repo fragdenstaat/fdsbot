@@ -22,7 +22,7 @@ const octokit = new Octokit({ auth: process.env.OCTOKIT_TOKEN });
 
 const child_process = require("child_process");
 
-const ALLOWED_USERS = ['stefanw', 'magda', 'arnese', 'Max', 'Karl // pajowu'];
+const ALLOWED_USERS = process.env.ALLOWED_USERS.split(",");
 const SUPER_USERS = ['stefanw'];
 const ROOM = "G5KALBN4F";
 
