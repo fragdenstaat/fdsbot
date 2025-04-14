@@ -123,7 +123,7 @@ module.exports = function (robot) {
       return done();
     }
 
-    if (Array.from(ALLOWED_USERS).includes(!context.response.message.user.name)) {
+    if (!Array.from(ALLOWED_USERS).includes(context.response.message.user.name)) {
       context.response.message.finish();
 
       // If the message starts with 'hubot' or the alias pattern, this user was
