@@ -332,7 +332,7 @@ module.exports = function (robot) {
     if (check_running(res)) {
       return;
     }
-    if (Array.from(SUPER_USERS).includes(!res.message.user.name)) {
+    if (!Array.from(SUPER_USERS).includes(res.message.user.name)) {
       return res.reply("You cannot force deploy.");
     }
     const deploy_tag = res.match[1];
