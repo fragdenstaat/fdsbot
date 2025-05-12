@@ -23,14 +23,10 @@ const octokit = new Octokit({ auth: process.env.OCTOKIT_TOKEN });
 const child_process = require("child_process");
 
 const ALLOWED_USERS = process.env.ALLOWED_USERS.split(",");
-const SUPER_USERS = ['stefanw'];
-const ROOM = "G5KALBN4F";
+const SUPER_USERS = process.env.SUPER_USERS.split(",");
+const ROOM = process.env.SLACK_ROOM;
 
-const CHECK_REPOS = [
-  "okfde/froide",
-  "okfde/fragdenstaat_de",
-  "okfde/django-filingcabinet",
-];
+const CHECK_REPOS = process.env.CHECK_REPOS.split(",");
 
 if (!Array.prototype.flat) {
   Object.defineProperty(Array.prototype, 'flat', {
