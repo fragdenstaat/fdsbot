@@ -14,7 +14,9 @@
     "hubot-slack": "4.10.0",
     "shelljs": ">= 0.5.3"
   },
-  "engines": {
-    "node": "0.10.x"
-  }
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "prettier-config-standard": "^7.0.0"
+  },
+  "prettier": "prettier-config-standard"
 }
