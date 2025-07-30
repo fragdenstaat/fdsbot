@@ -10,8 +10,6 @@ export const SLACK_APP_TOKEN = str.parse(process.env.SLACK_APP_TOKEN)
 export const SLACK_ROOM_PROD = str.parse(process.env.SLACK_ROOM_PROD)
 export const SLACK_ROOM_TEST = str.parse(process.env.SLACK_ROOM_TEST)
 
-export const SENTRY_DSN = z.string().optional().parse(process.env.SENTRY_DSN)
-
 export const ALLOWED_USERS = str.parse(process.env.ALLOWED_USERS).split(',')
 export const SUPER_USERS = str.parse(process.env.SUPER_USERS).split(',')
 

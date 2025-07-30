@@ -1,4 +1,10 @@
 import * as Sentry from '@sentry/node'
+if (process.env.SENTRY_DSN)
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    tracesSampleRate: 1.0
+  })
+
 import Bolt from '@slack/bolt'
 import {
   ALLOWED_USERS,
@@ -6,8 +12,7 @@ import {
   SLACK_ROOM_TEST,
   SLACK_SIGNING_SECRET,
   SLACK_BOT_TOKEN,
-  SLACK_APP_TOKEN,
-  SENTRY_DSN
+  SLACK_APP_TOKEN
 } from './conf.js'
 import { isAllowedChannel, isAllowedUser } from './auth.js'
 import {
@@ -18,12 +23,6 @@ import {
   ListCommand
 } from './commands.js'
 import { cancelAllDeployments } from './deployment.js'
-
-if (SENTRY_DSN)
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    tracesSampleRate: 1.0
-  })
 
 const app = new Bolt.App({
   signingSecret: SLACK_SIGNING_SECRET,
