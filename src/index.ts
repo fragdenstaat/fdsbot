@@ -7,22 +7,25 @@ if (process.env.SENTRY_DSN)
 
 import Bolt from '@slack/bolt'
 import {
-  ALLOWED_USERS,
   SLACK_ROOM_PROD,
   SLACK_ROOM_TEST,
   SLACK_SIGNING_SECRET,
   SLACK_BOT_TOKEN,
   SLACK_APP_TOKEN
 } from './conf.js'
-import { isAllowedChannel, isAllowedUser } from './auth.js'
+import {
+  actionAuthMiddleware,
+  isAllowedUser,
+  mentionAuthMiddleware
+} from './auth.js'
 import {
   CancelCommand,
   TestDeployCommand,
   ProductionDeployCommand,
   routeCommands,
   ListCommand
-} from './commands.js'
-import { cancelAllDeployments } from './deployment.js'
+} from './commands/index.js'
+import { cancelDeployment } from './deployment.js'
 
 const app = new Bolt.App({
   signingSecret: SLACK_SIGNING_SECRET,
@@ -31,53 +34,9 @@ const app = new Bolt.App({
   socketMode: true
 })
 
-app.use(async ({ payload, next, client }) => {
-  // main auth middleware - check that user and channel are allowed
-  const { channel, user } = payload as any
-
-  if (payload.type === 'member_joined_channel') return await next()
-
-  if (!isAllowedChannel(channel)) {
-    await client.chat.postMessage({
-      text: "I don't work in this channel.",
-      channel
-    })
-    return
-  }
-
-  if (!isAllowedUser(user)) {
-    await client.chat.postMessage({
-      text: 'You are not allowed to use this command',
-      channel,
-      blocks: [
-        {
-          type: 'rich_text',
-          elements: [
-            {
-              type: 'rich_text_section',
-              elements: [
-                {
-                  type: 'text',
-                  text: `You are not allowed to use this command. Please ask one of:`
-                },
-                ...ALLOWED_USERS.map((u) => ({
-                  type: 'user' as const,
-                  user_id: u
-                }))
-              ]
-            }
-          ]
-        }
-      ]
-    })
-    return
-  }
-
-  await next()
-})
-
 app.event(
   'app_mention',
+  mentionAuthMiddleware,
   routeCommands({
     [SLACK_ROOM_PROD]: [ProductionDeployCommand, CancelCommand, ListCommand],
     [SLACK_ROOM_TEST]: [TestDeployCommand, CancelCommand, ListCommand]
@@ -86,20 +45,19 @@ app.event(
 
 app.action(
   'cancel_deployment',
-  async ({ ack, body, respond, action, client }) => {
-    if (action.type === 'button') {
-      await ack()
-      if (cancelAllDeployments()) {
-        await respond(`<@${body.user.id}> Deployment cancelled.`)
-        await client.chat.postMessage({
-          channel: body.channel!.id!,
-          text: `A deployment was cancelled by <@${body.user.id}>.`
-        })
-      } else {
-        await respond(
-          `<@${body.user.id}> There are no queued or running deployments.`
-        )
-      }
+  actionAuthMiddleware,
+  async ({ ack, body, respond, say }) => {
+    await ack()
+    if (cancelDeployment(body.channel!.id!)) {
+      await respond(`Deployment cancelled.`)
+      await say({
+        channel: body.channel!.id!,
+        text: `A deployment was cancelled by <@${body.user.id}>.`
+      })
+    } else {
+      await respond(
+        `<@${body.user.id}> There are no queued or running deployments.`
+      )
     }
   }
 )

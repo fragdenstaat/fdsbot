@@ -14,8 +14,10 @@
   },
   "dependencies": {
     "@octokit/core": "^7.0.3",
+    "@sentry/cli": "^2.50.2",
     "@sentry/node": "^9.42.1",
     "@slack/bolt": "^4.4.0",
+    "@slack/types": "^2.15.0",
     "dotenv": "^17.2.0",
     "zod": "^4.0.5"
   },

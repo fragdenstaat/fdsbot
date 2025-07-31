@@ -1,6 +1,6 @@
 import z from 'zod'
 import EventEmitter from 'node:events'
-import { CheckData, runChecks } from './github.js'
+import { CheckData, collectChecks } from './github.js'
 import { promisify } from 'node:util'
 import child_process, { type ExecException } from 'node:child_process'
 import {
@@ -16,8 +16,9 @@ const exec = promisify(child_process.exec)
 export class AnsibleError extends Error {
   constructor(
     message: string,
-    public readonly stdout?: string,
-    public readonly stderr?: string
+    public readonly stdout = '',
+    public readonly stderr = '',
+    public readonly out = ''
   ) {
     super(message)
   }
@@ -48,9 +49,11 @@ export class DeploymentProcess extends EventEmitter<{
   public tag: DeploymentTag
   public createdAt: Date = new Date()
   public abort: AbortController
+  public abortedBy?: string
   public child?: child_process.ChildProcess
   public stdout = ''
   public stderr = ''
+  public out = ''
 
   public cwd = ANSIBLE_ROOT
   public ansiblePath = ANSIBLE_BIN
@@ -103,20 +106,33 @@ export class DeploymentProcess extends EventEmitter<{
 
   public async runChecks(
     pendingCallback: (pendingChecks: CheckData[]) => void
-  ) {
+  ): Promise<boolean | CheckData[]> {
     this.state = 'checking'
-    try {
-      const result = await runChecks(
-        CHECK_REPOS,
-        pendingCallback,
-        this.abort.signal
-      )
-      this.state = 'ready'
-      return result
-    } catch (error) {
-      this.state = 'error'
-      throw error
+
+    const checks = collectChecks(CHECK_REPOS)
+    this.abort.signal.addEventListener('abort', () => {
+      checks.return(undefined)
+    })
+
+    let first = true
+    for await (const check of checks) {
+      if (check.pending.length !== 0 && first) {
+        first = false
+        pendingCallback(check.pending)
+      }
+
+      if (check.failed.length !== 0) {
+        this.state = 'error'
+        return check.failed
+      }
     }
+
+    if (this.abort.signal.aborted) {
+      return false
+    }
+
+    this.state = 'ready'
+    return true
   }
 
   public async updateRepo(): Promise<boolean> {
@@ -146,6 +162,16 @@ export class DeploymentProcess extends EventEmitter<{
   }
 
   public async runPlaybook(): Promise<boolean> {
+    if (this.state !== 'ready') {
+      return false
+    }
+
+    this.state = 'running'
+
+    if (this.child) {
+      throw new Error('Ansible playbook is already running')
+    }
+
     const tags =
       this.tag === 'all'
         ? ['deploy-backend', 'deploy-frontend']
@@ -158,14 +184,6 @@ export class DeploymentProcess extends EventEmitter<{
     ]
 
     return new Promise((resolve, reject) => {
-      if (this.child) {
-        throw new Error('Ansible playbook is already running')
-      }
-
-      if (this.state !== 'ready') {
-        resolve(false)
-      }
-
       console.log('Running Ansible playbook with args:', args)
 
       const child = child_process.spawn(this.ansiblePath, args, {
@@ -176,7 +194,9 @@ export class DeploymentProcess extends EventEmitter<{
 
       child.stdout.on('data', (data) => {
         const text = data.toString()
+
         this.stdout += text
+        this.out += text
 
         for (const highlight of this.highlights) {
           const match = highlight.exec(text)
@@ -187,21 +207,35 @@ export class DeploymentProcess extends EventEmitter<{
       })
 
       child.stderr.on('data', (data) => {
-        this.stderr += data.toString()
+        const text = data.toString()
+        this.stderr += text
+        this.out += text
       })
 
-      child.on('exit', (code) => {
+      child.on('close', (code) => {
         if (code !== 0) {
           const error = new AnsibleError(
             `Ansible playbook failed with code ${code}`,
             this.stdout,
-            this.stderr
+            this.stderr,
+            this.out
           )
           this.state = 'error'
           reject(error)
         } else {
           this.state = 'done'
+          console.log('Ansible playbook finished successfully')
           resolve(true)
+        }
+      })
+
+      child.on('error', (error) => {
+        if (error.name === 'AbortError') {
+          this.state = 'aborted'
+          resolve(false)
+        } else {
+          this.state = 'error'
+          reject(error)
         }
       })
     })
@@ -216,6 +250,10 @@ export function getAllDeployments(): Array<[string, DeploymentProcess]> {
   return [...deployments.entries()]
 }
 
+export function canCreateDeployment(id: string): boolean {
+  return deployments.get(id)?.safeToClear() ?? true
+}
+
 /**
  * Create a new deployment process, if one is not already running.
  */
@@ -223,14 +261,11 @@ export function createDeployment(
   id: string,
   ...args: ConstructorParameters<typeof DeploymentProcess>
 ): DeploymentProcess {
-  const deployment = deployments.get(id)
-  if (deployment) {
-    if (!deployment.safeToClear()) {
-      throw new Error('There is already a running deployment')
-    }
-
-    clearDeployment(id)
+  if (!canCreateDeployment(id)) {
+    throw new Error('There is already a running deployment')
   }
+
+  clearDeployment(id)
 
   const proc = new DeploymentProcess(...args)
   deployments.set(id, proc)
@@ -241,12 +276,13 @@ export function createDeployment(
  * Cancel the current deployment if it is running.
  * @returns `true` if a deployment was running and has been cancelled, `false` otherwise.
  */
-export function cancelDeployment(id: string): boolean {
+export function cancelDeployment(id: string, user?: string): boolean {
   const proc = deployments.get(id)
   if (!proc) {
     return false
   }
 
+  proc.abortedBy = user
   proc.abort.abort('Deployment cancelled by user')
   deployments.delete(id)
   return true
@@ -263,28 +299,22 @@ export function clearDeployment(id: string): boolean {
     return false
   }
 
-  deployments.delete(id)
-  return true
+  return deployments.delete(id)
 }
 
 /**
  * Cancel or clear all deployments.
  * @returns `true` if there were deployments that were cancelled or cleared, `false`
  */
-export function cancelAllDeployments(): boolean {
-  const runningDeployments = [...deployments.entries()].filter(([_k, d]) =>
-    d.isRunning()
-  )
+export function cancelAllDeployments(user?: string): boolean {
+  const isRunning = deployments.entries().some(([, proc]) => proc.isRunning())
 
   for (const proc of deployments.values()) {
+    proc.abortedBy = user
     proc.abort.abort('Deployment cancelled by user')
   }
 
   deployments.clear()
 
-  if (runningDeployments.length === 0) {
-    return false
-  }
-
-  return true
+  return isRunning
 }
