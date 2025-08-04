@@ -29,5 +29,6 @@
     "prettier-config-standard": "^7.0.0",
     "typescript": "^5.8.3"
   },
-  "prettier": "prettier-config-standard"
+  "prettier": "prettier-config-standard",
+  "packageManager": "pnpm@9.15.5"
 }
