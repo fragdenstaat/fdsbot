@@ -6,7 +6,7 @@
   "description": "Der hilfreiche FragDenStaat-Bot",
   "type": "module",
   "scripts": {
-    "start": "node dist/index.js",
+    "start": "node --import ./dist/sentry.js dist/index.js",
     "build": "tsc",
     "lint": "eslint ./src",
     "typecheck": "tsc --noEmit",
