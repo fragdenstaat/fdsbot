@@ -185,7 +185,7 @@ class DeployCommand extends Command<ParsedDeployCommand> {
     }
 
     this.deployment.on('progress', async (message) => {
-      await this.sendMessage(`Deployment progress: ${message}`)
+      await this.sendMessage(message)
     })
 
     try {
