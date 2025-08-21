@@ -45,7 +45,7 @@ export async function* collectChecks(
       name: check.name,
       repo: repoNameFromUrl(check.url)
     }
-    if (check.status === 'in_progress') {
+    if (check.status !== 'completed') {
       pending.push(checkData)
     } else if (check.conclusion !== 'success') {
       failed.push(checkData)
