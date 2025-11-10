@@ -271,7 +271,7 @@ export class ProductionDeployCommand extends DeployCommand {
 }
 
 export class TestDeployCommand extends DeployCommand {
-  public allowedUserArgs = ['fragdenstaat_de', 'froide']
+  public allowedUserArgs = ['fragdenstaat_de']
 
   protected async runChecks() {
     // in test environment, we don't run checks
@@ -285,13 +285,6 @@ export class TestDeployCommand extends DeployCommand {
       args.push(
         '-e',
         JSON.stringify({ git_branch: userArgs.get('fragdenstaat_de') })
-      )
-    }
-
-    if (userArgs.has('froide')) {
-      args.push(
-        '-e',
-        JSON.stringify({ froide_version: userArgs.get('froide') })
       )
     }
 
