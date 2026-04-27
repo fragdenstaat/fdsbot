@@ -35,7 +35,7 @@ export async function* collectChecks(
   const results = await Promise.all(promises)
   const checks = results
     .flatMap((result) => result.data.check_runs)
-    .filter((check) => check.name !== 'Dependabot')
+    .filter((check) => !['Dependabot', 'update-uv-graph'].includes(check.name))
   const pending: CheckData[] = []
   const failed: CheckData[] = []
 
