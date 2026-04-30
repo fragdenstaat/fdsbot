@@ -16,7 +16,10 @@ export const SUPER_USERS = str.parse(process.env.SUPER_USERS).split(',')
 export const ANSIBLE_ROOT = str.parse(process.env.ANSIBLE_ROOT)
 export const ANSIBLE_BIN = str.parse(process.env.ANSIBLE_BIN)
 export const ANSIBLE_PLAYBOOK = str.parse(process.env.ANSIBLE_PLAYBOOK)
-export const CHECK_REPOS = str.parse(process.env.CHECK_REPOS).split(',')
+export const CHECK_REPOS = str.parse(process.env.GITHUB_CHECK_REPOS).split(',')
+export const IGNORE_CHECKS = str
+  .parse(process.env.GITHUB_IGNORE_CHECKS)
+  .split(',')
 
 export const DEPLOYMENT_HIGHLIGHTS = str
   .parse(process.env.DEPLOYMENT_HIGHLIGHTS)

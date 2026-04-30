@@ -1,6 +1,6 @@
 import { Octokit } from '@octokit/core'
 import { wait } from './utils.js'
-import { OCTOKIT_TOKEN } from './conf.js'
+import { IGNORE_CHECKS, OCTOKIT_TOKEN } from './conf.js'
 
 const octokit = new Octokit({ auth: OCTOKIT_TOKEN })
 
@@ -35,7 +35,7 @@ export async function* collectChecks(
   const results = await Promise.all(promises)
   const checks = results
     .flatMap((result) => result.data.check_runs)
-    .filter((check) => !['Dependabot', 'update-uv-graph'].includes(check.name))
+    .filter((check) => !IGNORE_CHECKS.includes(check.name))
   const pending: CheckData[] = []
   const failed: CheckData[] = []
 
