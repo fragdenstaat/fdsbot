@@ -77,6 +77,12 @@ export class DeploymentProcess extends EventEmitter<{
     this.emit('state', newState)
   }
 
+  private assertState(targetState: DeploymentState) {
+    if (this.state !== targetState) {
+      throw new Error(`Must be in state "${targetState}" to run this command, but current state is "${this.state}".`)
+    }
+  }
+
   constructor(
     public user: string,
     tag: string,
@@ -107,6 +113,7 @@ export class DeploymentProcess extends EventEmitter<{
   public async runChecks(
     pendingCallback: (pendingChecks: CheckData[]) => void
   ): Promise<boolean | CheckData[]> {
+    this.assertState('queued')
     this.state = 'checking'
 
     const checks = collectChecks(CHECK_REPOS)
@@ -136,9 +143,7 @@ export class DeploymentProcess extends EventEmitter<{
   }
 
   public async updateRepo(): Promise<boolean> {
-    if (this.state !== 'queued') {
-      return false
-    }
+    this.assertState('ready')
 
     this.state = 'updating'
 
@@ -162,9 +167,7 @@ export class DeploymentProcess extends EventEmitter<{
   }
 
   public async runPlaybook(): Promise<boolean> {
-    if (this.state !== 'ready') {
-      return false
-    }
+    this.assertState('ready')
 
     this.state = 'running'
 
