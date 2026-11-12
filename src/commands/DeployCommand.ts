@@ -157,6 +157,7 @@ class DeployCommand extends Command<ParsedDeployCommand> {
           'Please contact a superuser.'
         )
       } else {
+        this.deployment.skipChecks()
         await this.sendMessage(
           'Deployment started',
           'Skipping checks. This better be good.',

@@ -142,6 +142,11 @@ export class DeploymentProcess extends EventEmitter<{
     return true
   }
 
+  public skipChecks() {
+    this.assertState('queued')
+    this.state = 'ready'
+  }
+
   public async updateRepo(): Promise<boolean> {
     this.assertState('ready')
 
